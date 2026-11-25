@@ -1,0 +1,7 @@
+schema: factory/decision/1
+id: DEC-20261125T231626Z-445a9c
+created: '2026-11-25T23:16:26Z'
+by: owner@role-human
+blocker: BLK-20261125T231216Z-be0dab
+decision: retry
+reason: Gitleaks was not installed on the owner's machine; installed now.
