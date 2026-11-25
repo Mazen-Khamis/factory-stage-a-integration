@@ -1,0 +1,14 @@
+schema: factory/blocker/1
+id: BLK-20261125T235619Z-f8e271
+created: '2026-11-25T23:56:19Z'
+by: factory
+reason:
+  code: verification_failed
+  text: 'An attempt of the verification failed; a later attempt that passed does not
+    count (run 45723785947 attempt 2: cancelled).'
+affects:
+  task: TASK-0001
+  run: RUN-20261125T234503Z-ed1a72
+event:
+  kind: verification_failed
+  ref: pull request 4
