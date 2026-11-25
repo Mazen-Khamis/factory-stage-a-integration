@@ -1,0 +1,7 @@
+schema: factory/decision/1
+id: DEC-20261125T231147Z-a3f1e6
+created: '2026-11-25T23:11:47Z'
+by: owner@role-human
+blocker: BLK-20261125T230920Z-83b826
+decision: retry
+reason: The workflow was fixed after this run; start again on the new base.
