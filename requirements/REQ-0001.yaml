@@ -1,0 +1,5 @@
+schema: factory/requirement/1
+id: REQ-0001
+statement: The package returns a greeting.
+acceptance_criteria:
+  - The function hello returns a text that starts with "Hello".

@@ -1,0 +1,9 @@
+schema: factory/task/1
+id: TASK-0001
+requirement: REQ-0001
+acceptance_tests: [tests/acceptance/test_hello.py]
+test_support: []
+allowed_paths: [src/hello/]
+instruction: Keep the function hello returning a greeting; changes are allowed only under src/hello/.
+limits: {time_minutes: 5, turns: 5, runs: 3}
+model: not-used-by-the-test-adapter

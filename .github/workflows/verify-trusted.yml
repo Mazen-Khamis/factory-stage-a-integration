@@ -1,0 +1,152 @@
+# Shipped by the AI Software Factory. Protected content of the project: it changes
+# only through a change to the default branch that is itself verified and approved.
+#
+# Specification: github-and-ci.md, sections 4.2 and 4.3; ADR-0003; ADR-0004.
+#
+# The workflow definition and the approved acceptance tests come from the commit
+# of the default branch (github.sha); only the code under test comes from the
+# head of the pull request. No secret, no cache, no write right.
+name: verify-trusted
+
+run-name: verify-trusted pr-${{ github.event.pull_request.number }} ${{ github.event.pull_request.head.sha }}
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-trusted:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      result_written: ${{ steps.uploaded.outputs.written }}
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      DEFINITION_SHA: ${{ github.sha }}
+      PULL_REQUEST: ${{ github.event.pull_request.number }}
+      REPOSITORY_ID: ${{ github.repository_id }}
+      RUN_ID: ${{ github.run_id }}
+      RUN_ATTEMPT: ${{ github.run_attempt }}
+      RUNNER_IMAGE: ubuntu-24.04
+      WORK: ${{ runner.temp }}/verify
+    steps:
+      # 1. The name of the head branch, read only through the environment.
+      - name: Check the name of the head branch
+        run: |
+          if ! printf '%s' "$HEAD_REF" | grep -Eqx 'factory/TASK-[0-9]{4}/RUN-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{6}'; then
+            echo "::error::the head branch is not a task branch of the factory"
+            exit 1
+          fi
+          mkdir -p "$WORK"
+
+      # 2. Exactly two commits, never a branch name.
+      - name: Check out the default branch at the commit of this run
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          persist-credentials: false
+
+      - name: Check out the head of the pull request
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: candidate
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12.16"
+
+      # 3. The state of the approved acceptance tests, from the trusted checkout.
+      - name: Compute the test state
+        id: state
+        run: python trusted/.factory/verify/make_result.py state --trusted trusted --work "$WORK"
+
+      # 4. Before any code of the task branch runs.
+      - name: Scan the commits of the pull request for secrets
+        id: scan
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          curl -fsSL -o "$WORK/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $WORK/gitleaks.tar.gz" | sha256sum -c -
+          mkdir -p "$WORK/bin"
+          tar -xzf "$WORK/gitleaks.tar.gz" -C "$WORK/bin" gitleaks
+          cd "$WORK"
+          "$WORK/bin/gitleaks" git "$GITHUB_WORKSPACE/candidate" --no-banner --redact \
+            --log-opts="${DEFINITION_SHA}..${HEAD_SHA}"
+
+      # 5. The approved tests replace those of the task branch; then the code under test runs.
+      - name: Copy the approved tests over the candidate and run them
+        id: tests
+        continue-on-error: true
+        run: |
+          python trusted/.factory/verify/make_result.py copy --trusted trusted --candidate candidate --work "$WORK"
+          python -m pip install --quiet "pytest==9.2.0"
+          python -m pip install --quiet ./candidate
+          cd candidate
+          set +e
+          xargs -0 -a "$WORK/acceptance-tests" python -m pytest -p no:cacheprovider --junitxml="$WORK/junit.xml"
+          echo "$?" > "$WORK/pytest-exit"
+
+      # 6. Written whatever the scan and the tests did, once the test state is known.
+      - name: Write result.json
+        id: result
+        if: always() && steps.state.outcome == 'success'
+        env:
+          SCAN_OUTCOME: ${{ steps.scan.outcome }}
+          TESTS_OUTCOME: ${{ steps.tests.outcome }}
+        run: python trusted/.factory/verify/make_result.py result --work "$WORK" --output result.json
+
+      - name: Upload result.json
+        id: upload
+        if: always() && steps.result.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: result
+          path: result.json
+          if-no-files-found: error
+
+      - name: Say that the result exists
+        id: uploaded
+        if: always() && steps.upload.outcome == 'success'
+        run: echo "written=true" >> "$GITHUB_OUTPUT"
+
+      # 7. Last: the required check is red unless the result is "passed".
+      - name: Fail unless the result is passed
+        if: always()
+        env:
+          RESULT: ${{ steps.result.outputs.result }}
+        run: |
+          echo "result: ${RESULT:-none}"
+          test "$RESULT" = "passed"
+
+  # Signs the result file. Runs no code of the task branch and checks out nothing.
+  attest:
+    needs: verify-trusted
+    if: always() && needs.verify-trusted.outputs.result_written == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download result.json
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: result
+
+      - name: Attest result.json
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: result.json
