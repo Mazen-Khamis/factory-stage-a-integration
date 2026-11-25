@@ -1,0 +1,25 @@
+{
+  "schema": "factory/result/1",
+  "repository_id": 1472319440,
+  "run": {
+    "id": 45720156444,
+    "attempt": 1
+  },
+  "task": "TASK-0001",
+  "run_ref": "RUN-20261125T231646Z-87f8f4",
+  "pull_request": 2,
+  "implementation_commit": "b9d23ff8b3140f23c1d609f9ee40d21b8eb8e1c9",
+  "definition_commit": "b012e08f930d0ff29e7cc6ab2f4d0fb0a1d05d6e",
+  "test_state": "sha256:e2c965b3397adbdddcd030fb9dc39d09e7be480a7745de597e16fe1861ba47d5",
+  "result": "passed",
+  "environment": {
+    "runner": "ubuntu-24.04",
+    "python": "3.12.16"
+  },
+  "tests": {
+    "total": 1,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

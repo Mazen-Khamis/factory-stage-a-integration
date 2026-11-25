@@ -1,0 +1,24 @@
+schema: factory/evidence/1
+id: EV-20261125T231825Z-6f9515
+created: '2026-11-25T23:18:25Z'
+by: factory
+task: TASK-0001
+work_order: WO-20261125T231646Z-adcf52
+agent_run: RUN-20261125T231646Z-87f8f4
+implementation_commit: b9d23ff8b3140f23c1d609f9ee40d21b8eb8e1c9
+base_commit: b012e08f930d0ff29e7cc6ab2f4d0fb0a1d05d6e
+test_state: sha256:e2c965b3397adbdddcd030fb9dc39d09e7be480a7745de597e16fe1861ba47d5
+verification:
+  run:
+    id: '45720156444'
+    url: https://github.com/Mazen-Khamis/factory-stage-a-integration/actions/runs/45720156444
+  definition: .github/workflows/verify-trusted.yml@b012e08f930d0ff29e7cc6ab2f4d0fb0a1d05d6e
+  environment:
+    runner: ubuntu-24.04
+    python: 3.12.16
+  seeds: none
+result: passed
+attestation:
+  verified: true
+  signer_workflow: https://github.com/Mazen-Khamis/factory-stage-a-integration/.github/workflows/verify-trusted.yml@refs/heads/main
+  repository_id: '1472319440'
