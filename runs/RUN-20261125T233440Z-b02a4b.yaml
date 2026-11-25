@@ -1,0 +1,35 @@
+schema: factory/run/1
+id: RUN-20261125T233440Z-b02a4b
+created: '2026-11-25T23:34:45Z'
+by: factory
+work_order: WO-20261125T233440Z-e1222e
+started: '2026-11-25T23:34:43Z'
+ended: '2026-11-25T23:34:43Z'
+outcome: failed
+reason:
+  code: package_rejected
+  text: 'The change package was rejected: the secret scanner Gitleaks is not installed;
+    a package is not accepted without a scan'
+provenance:
+  adapter:
+    name: test
+    version: '1'
+  agent:
+    name: none
+    version: '1'
+  provider: none
+  model_requested: not-used-by-the-test-adapter
+  model_reported: not reported
+  parameters:
+    max_turns: 5
+    scenario: success
+  usage:
+    tokens:
+      input: 0
+      output: 0
+    cost_usd: 0
+    cost_is_estimate: false
+  session: scripted-RUN-20261125T233440Z-b02a4b
+  platform_run: not reported
+package: none
+implementation_commit: none
