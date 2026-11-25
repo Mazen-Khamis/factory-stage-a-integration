@@ -32,16 +32,18 @@ jobs:
       RUN_ID: ${{ github.run_id }}
       RUN_ATTEMPT: ${{ github.run_attempt }}
       RUNNER_IMAGE: ubuntu-24.04
-      WORK: ${{ runner.temp }}/verify
     steps:
       # 1. The name of the head branch, read only through the environment.
+      # WORK is a folder outside both checkouts. It is set here, for the later
+      # steps, because the context `runner` does not exist in the env of a job.
       - name: Check the name of the head branch
         run: |
           if ! printf '%s' "$HEAD_REF" | grep -Eqx 'factory/TASK-[0-9]{4}/RUN-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{6}'; then
             echo "::error::the head branch is not a task branch of the factory"
             exit 1
           fi
-          mkdir -p "$WORK"
+          mkdir -p "$RUNNER_TEMP/verify"
+          echo "WORK=$RUNNER_TEMP/verify" >> "$GITHUB_ENV"
 
       # 2. Exactly two commits, never a branch name.
       - name: Check out the default branch at the commit of this run
