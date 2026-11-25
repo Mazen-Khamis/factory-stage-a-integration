@@ -1,0 +1,18 @@
+schema: factory/approval/1
+id: APR-20261125T223350Z-447813
+created: '2026-11-25T22:33:50Z'
+by: owner@role-human
+covers:
+- kind: frame
+  ref: factory-stage-a-integration
+  state: sha256:982adeb8f83f3f236eb605980ddb81b4899fc8fc6e3f3cc3bd580fda5f174896
+- kind: requirement
+  ref: REQ-0001
+  state: sha256:b6a75a8f4dfee0bda4fcb5e3dafff8d08fbb69f5f3effdada180201e9e63898d
+- kind: task
+  ref: TASK-0001
+  state: sha256:8fd1fb69b900fc8d19d2b77dff6e6e10b61f886d800534bbcd180b90b0637b5e
+- kind: tests
+  ref: TASK-0001
+  state: sha256:e2c965b3397adbdddcd030fb9dc39d09e7be480a7745de597e16fe1861ba47d5
+note: Approval for the integration tests.
