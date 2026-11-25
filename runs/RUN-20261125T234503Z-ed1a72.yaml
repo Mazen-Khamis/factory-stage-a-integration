@@ -1,0 +1,37 @@
+schema: factory/run/1
+id: RUN-20261125T234503Z-ed1a72
+created: '2026-11-25T23:45:15Z'
+by: factory
+work_order: WO-20261125T234503Z-84270e
+started: '2026-11-25T23:45:07Z'
+ended: '2026-11-25T23:45:07Z'
+outcome: completed
+reason:
+  code: none
+  text: ''
+provenance:
+  adapter:
+    name: test
+    version: '1'
+  agent:
+    name: none
+    version: '1'
+  provider: none
+  model_requested: not-used-by-the-test-adapter
+  model_reported: not reported
+  parameters:
+    max_turns: 5
+    scenario: success
+  usage:
+    tokens:
+      input: 0
+      output: 0
+    cost_usd: 0
+    cost_is_estimate: false
+  session: scripted-RUN-20261125T234503Z-ed1a72
+  platform_run: not reported
+package:
+  sha256: dea1ba8e1a7bcbbc3cc40b48579210f34bf8bf04d3406416dd83b5340aa09ec2
+  files:
+  - src/hello/changed_by_the_test_adapter.txt
+implementation_commit: a2f4d3055d9dc37c145141ca14bbf25c1ec6dab2
