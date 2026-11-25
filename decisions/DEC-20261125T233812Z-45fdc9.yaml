@@ -1,0 +1,7 @@
+schema: factory/decision/1
+id: DEC-20261125T233812Z-45fdc9
+created: '2026-11-25T23:38:12Z'
+by: owner@role-human
+blocker: BLK-20261125T233448Z-3d3e0b
+decision: retry
+reason: Gitleaks was not on the PATH; now installed in the factory environment.
