@@ -1,0 +1,15 @@
+schema: factory/blocker/1
+id: BLK-20261125T230920Z-83b826
+created: '2026-11-25T23:09:20Z'
+by: factory
+reason:
+  code: verification_failed
+  text: 'The result of the verification was refused: the result names definition_commit
+    = b012e08f930d0ff29e7cc6ab2f4d0fb0a1d05d6e, but the base commit of the work order
+    is b1d11d2ec448b34ed8585b9c922c6d05e4dc2548.'
+affects:
+  task: TASK-0001
+  run: RUN-20261125T223621Z-ff62a5
+event:
+  kind: verification_failed
+  ref: pull request 1
