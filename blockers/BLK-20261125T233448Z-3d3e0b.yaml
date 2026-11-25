@@ -1,0 +1,14 @@
+schema: factory/blocker/1
+id: BLK-20261125T233448Z-3d3e0b
+created: '2026-11-25T23:34:48Z'
+by: factory
+reason:
+  code: package_rejected
+  text: 'The change package was rejected: the secret scanner Gitleaks is not installed;
+    a package is not accepted without a scan'
+affects:
+  task: TASK-0001
+  run: RUN-20261125T233440Z-b02a4b
+event:
+  kind: run_ended
+  ref: RUN-20261125T233440Z-b02a4b
