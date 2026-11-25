@@ -1,0 +1,6 @@
+schema: factory/frame/1
+project: factory-stage-a-integration
+owner: owner@role-human
+approvers: [owner@role-human]
+confidentiality: open
+agent: claude-code
