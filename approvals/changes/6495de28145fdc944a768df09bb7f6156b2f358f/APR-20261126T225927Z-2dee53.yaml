@@ -1,0 +1,10 @@
+schema: factory/approval/1
+id: APR-20261126T225927Z-2dee53
+created: '2026-11-26T22:59:27Z'
+by: owner@role-human
+covers:
+- kind: change
+  ref: TASK-0001
+  commit: 6495de28145fdc944a768df09bb7f6156b2f358f
+  evidence: EV-20261126T224636Z-b56411
+note: Approved for the integration tests.
