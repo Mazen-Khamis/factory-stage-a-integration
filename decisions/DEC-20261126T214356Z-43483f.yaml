@@ -1,0 +1,7 @@
+schema: factory/decision/1
+id: DEC-20261126T214356Z-43483f
+created: '2026-11-26T21:43:56Z'
+by: owner@role-human
+blocker: BLK-20261125T235619Z-f8e271
+decision: retry
+reason: GC-04 shown; start again for the tests of WP09.
