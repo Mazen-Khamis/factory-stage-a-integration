@@ -138,6 +138,17 @@ def _text(raw: bytes) -> str:
     return raw.decode("utf-8", errors="replace").strip()
 
 
+def _absolute(path: Path | str) -> Path:
+    """The path as an absolute one, from the working directory of this process.
+
+    Every Git command here runs with `-C <repository>`. A relative path in a
+    Git option, like the list of signers, would be read from that repository
+    and not from where the caller stands; Git then verifies a signature but
+    finds no principal for it.
+    """
+    return Path(os.path.abspath(path))
+
+
 def _show(folder: Path | str, commit: str, path: str) -> bytes:
     result = _git(folder, "show", f"{commit}:{path}")
     if result.returncode != 0:
@@ -198,7 +209,11 @@ def read_records(records_dir: Path | str, ref: str, signers_file: Path | str, ap
     commit carries a good signature of a key on the list of signers, and the
     role of that key is the role that writes this kind of record; a human
     signer must be an approver. Raises RuleError with the commit and the reason.
+
+    The paths are made absolute first: Git runs inside `records_dir`, and a
+    relative path of the list of signers in a Git option would be read from there.
     """
+    records_dir, signers_file = _absolute(records_dir), _absolute(signers_file)
     listed = _git(records_dir, "rev-list", "--topo-order", "--reverse", "--parents", ref)
     if listed.returncode != 0:
         raise RuleError(f"the records branch cannot be read: {_text(listed.stderr) or 'no such reference'}")
@@ -412,6 +427,7 @@ def check_merge(records_dir: Path | str, trusted_dir: Path | str, head: str, all
     """
     if not _COMMIT.fullmatch(head or ""):
         return Decision(False, (f"{head!r} is not a commit identifier",))
+    records_dir, trusted_dir, allowed_signers = _absolute(records_dir), _absolute(trusted_dir), _absolute(allowed_signers)
     try:
         records, default_head = _trusted_records(records_dir, records_ref, trusted_dir, trusted_ref, allowed_signers)
     except RuleError as exc:
@@ -635,14 +651,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--trusted", default="trusted", help="checkout of the default branch")
     parser.add_argument("--gh", default="gh", help="the command line of GitHub, in the pinned version")
     args = parser.parse_args(argv)
+    records, trusted = _absolute(args.records), _absolute(args.trusted)
+    # A path to gh is made absolute; a bare name stays a name, to be found on the PATH.
+    executable = str(_absolute(args.gh)) if os.path.dirname(args.gh) else args.gh
     try:
         head, number = env["HEAD_SHA"], int(env["PULL_REQUEST"])
-        gh = GhCommand(env["GITHUB_REPOSITORY"], int(env["GITHUB_REPOSITORY_ID"]), env["DEFAULT_BRANCH"], args.gh)
+        gh = GhCommand(env["GITHUB_REPOSITORY"], int(env["GITHUB_REPOSITORY_ID"]), env["DEFAULT_BRANCH"], executable)
     except (KeyError, ValueError) as exc:
         print(f"approval-gate: the job does not say what to check ({type(exc).__name__}: {exc})")
         return 1
-    decision = check_merge(args.records, args.trusted, head, Path(args.trusted) / ".factory" / "allowed_signers", gh,
-                           pull_request=number)
+    decision = check_merge(records, trusted, head, trusted / ".factory" / "allowed_signers", gh, pull_request=number)
     if decision.passed:
         print(f"approval-gate: passed for pull request {number}, head {head}: "
               f"approval {decision.approval}, evidence {decision.evidence}")
