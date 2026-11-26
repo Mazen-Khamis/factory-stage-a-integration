@@ -1,0 +1,84 @@
+# Shipped by the AI Software Factory. Protected content of the project: it changes
+# only through a change to the default branch that is itself verified and approved.
+#
+# Specification: github-and-ci.md, section 6.2; record formats, "Rule for a merge";
+# ADR-0005.
+#
+# The job passes only if a human approved exactly the head of the pull request
+# and the evidence for it holds. It reads the default branch and the records
+# branch, and it asks GitHub about the attestation and the runs of
+# verify-trusted. It runs no code of the task branch, and it never checks the
+# task branch out. No secret of the repository, no cache, no write right.
+name: approval-gate
+
+run-name: approval-gate pr-${{ github.event.pull_request.number }} ${{ github.event.pull_request.head.sha }}
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+  actions: read
+  attestations: read
+
+jobs:
+  approval-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PULL_REQUEST: ${{ github.event.pull_request.number }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      # 1. gh in the pinned version, not the one of the runner image.
+      # GATE is a folder outside both checkouts. It is set here, for the later
+      # steps, because the context `runner` does not exist in the env of a job.
+      - name: Install gh in the pinned version
+        env:
+          GH_VERSION: 2.102.0
+          GH_SHA256: bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386
+        run: |
+          mkdir -p "$RUNNER_TEMP/gate/bin"
+          curl -fsSL -o "$RUNNER_TEMP/gate/gh.tar.gz" \
+            "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz"
+          echo "${GH_SHA256}  $RUNNER_TEMP/gate/gh.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gate/gh.tar.gz" -C "$RUNNER_TEMP/gate"
+          install -m 0755 "$RUNNER_TEMP/gate/gh_${GH_VERSION}_linux_amd64/bin/gh" "$RUNNER_TEMP/gate/bin/gh"
+          "$RUNNER_TEMP/gate/bin/gh" --version
+          echo "GATE=$RUNNER_TEMP/gate" >> "$GITHUB_ENV"
+
+      # 2. The default branch, at its current head, and the records branch with its whole history.
+      - name: Check out the default branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: trusted
+          persist-credentials: false
+
+      - name: Check out the records branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: factory-records
+          path: records
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12.16"
+
+      - name: Install PyYAML in the pinned version
+        env:
+          PYYAML: "pyyaml==6.0.3 --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc"
+        run: |
+          printf '%s\n' "$PYYAML" > "$GATE/requirements.txt"
+          python -m pip install --quiet --require-hashes --only-binary :all: --no-deps -r "$GATE/requirements.txt"
+
+      # 3 to 8. The rule for a merge, by the gate script of the default branch.
+      # The token of the job reads only; it is given to this step alone.
+      - name: Apply the rule for a merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python trusted/.factory/gate/approval_gate.py --records records --trusted trusted --gh "$GATE/bin/gh"
