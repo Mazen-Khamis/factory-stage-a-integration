@@ -49,6 +49,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -80,6 +81,10 @@ _PATHS = (
 _EVIDENCE_PATH = re.compile(rf"^evidence/(EV-{_ID})/evidence\.yaml$")
 _GOOD_SIGNATURE = re.compile(r'^Good "git" signature for (\S+) with \S+ key \S+\s*$', re.MULTILINE)
 _KEY_TYPE = re.compile(r"^(ssh-|ecdsa-|sk-)")
+# Options of a line of allowed_signers. A time must be whole and in UTC: without the Z, ssh-keygen reads local time.
+_SIGNER_OPTION = re.compile(r'namespaces="[^",]*"|valid-(after|before)="\d{14}Z"')
+# A committer time may lie at most this many seconds after the UTC time of the check (ADR-0008, point 2).
+FUTURE_TOLERANCE = 600
 _FILE_MODE = "100644"
 
 
@@ -130,7 +135,8 @@ class Decision:
 # ----------------------------------------------------------------------- git
 
 def _git(folder: Path | str, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", "-C", str(folder), *args], env=dict(os.environ, LC_ALL="C"),
+    # UTC: Git compares the time of a commit with valid-before of a signer in the local time zone.
+    return subprocess.run(["git", "-C", str(folder), *args], env=dict(os.environ, LC_ALL="C", TZ="UTC"),
                           stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
@@ -184,9 +190,10 @@ def parse_signers(text: bytes) -> dict[str, str]:
         principal, options, key = tokens[0], tokens[1:at], tokens[at + 1]
         if any(c in principal for c in ",*?!"):
             raise ValueError(f"line {number}: exactly one principal without a pattern is allowed, not {principal!r}")
-        for option in options:
-            if not option.startswith("namespaces="):
-                raise ValueError(f"line {number}: the option {option!r} is not allowed")
+        for option in ",".join(options).split(","):
+            if option and not _SIGNER_OPTION.fullmatch(option):
+                raise ValueError(f"line {number}: the option {option!r} is not allowed; allowed are namespaces=\"…\" "
+                                 "and valid-after or valid-before with a time in UTC, like valid-before=\"20261127120000Z\"")
         try:
             role_of(principal)
         except ValueError as exc:
@@ -201,30 +208,45 @@ def parse_signers(text: bytes) -> dict[str, str]:
 
 # ------------------------------------------------------------ records branch
 
-def read_records(records_dir: Path | str, ref: str, signers_file: Path | str, approvers: tuple[str, ...]) -> list[Entry]:
+def read_records(records_dir: Path | str, ref: str, signers_file: Path | str, approvers: tuple[str, ...],
+                 now: int | None = None) -> list[Entry]:
     """Check the whole records branch and return its records, oldest first (section 6.2, step 3).
 
     Every commit has exactly one parent, the first one none. Every commit only
     adds files, with rename detection off, and adds exactly one record. Every
     commit carries a good signature of a key on the list of signers, and the
     role of that key is the role that writes this kind of record; a human
-    signer must be an approver. Raises RuleError with the commit and the reason.
+    signer must be an approver. The committer time of every commit is later
+    than that of its parent, so that a commit cannot be dated back to a time at
+    which a key that was retired with `valid-before` still counted, and not
+    more than FUTURE_TOLERANCE seconds after `now`, the UTC time of this check
+    (ADR-0008, point 2; section 8.4). Raises RuleError with the commit and the
+    reason.
 
     The paths are made absolute first: Git runs inside `records_dir`, and a
     relative path of the list of signers in a Git option would be read from there.
     """
     records_dir, signers_file = _absolute(records_dir), _absolute(signers_file)
-    listed = _git(records_dir, "rev-list", "--topo-order", "--reverse", "--parents", ref)
+    now = int(time.time()) if now is None else now
+    listed = _git(records_dir, "rev-list", "--topo-order", "--reverse", "--parents", "--timestamp", ref)
     if listed.returncode != 0:
         raise RuleError(f"the records branch cannot be read: {_text(listed.stderr) or 'no such reference'}")
     entries: list[Entry] = []
     seen: dict[str, str] = {}
+    times: dict[str, int] = {}
     for index, line in enumerate(_text(listed.stdout).splitlines()):
-        commit, *parents = line.split()
+        stamp, commit, *parents = line.split()
+        times[commit] = int(stamp)
         if index == 0 and parents:
             raise RuleError(f"records commit {commit}: the first commit of the branch must have no parent")
         if index > 0 and len(parents) != 1:
             raise RuleError(f"records commit {commit}: has {len(parents)} parents; every commit must have exactly one")
+        if parents and parents[0] in times and times[commit] <= times[parents[0]]:
+            raise RuleError(f"records commit {commit}: its committer time {times[commit]} is not later than that of its parent "
+                            f"({times[parents[0]]}); the times of the records branch must only increase")
+        if times[commit] > now + FUTURE_TOLERANCE:
+            raise RuleError(f"records commit {commit}: its committer time {times[commit]} lies in the future, more than "
+                            f"{FUTURE_TOLERANCE} seconds after the time of this check ({now})")
         try:
             entry = _check_commit(records_dir, commit, index == 0, signers_file, approvers)
         except RuleError as exc:
