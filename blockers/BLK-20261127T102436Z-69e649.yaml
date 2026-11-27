@@ -1,0 +1,15 @@
+schema: factory/blocker/1
+id: BLK-20261127T102436Z-69e649
+created: '2026-11-27T10:24:36Z'
+by: factory
+reason:
+  code: base_moved
+  text: 'The default branch main has moved since the work order: it is at 784d21ae47cb04e757f9149e0810b75da433afd5,
+    the work order starts from ce20a126911fcaabecfaabbae6b85c52f82b676c. The change
+    is not merged; the task is started again on the new base after a decision.'
+affects:
+  task: TASK-0001
+  run: RUN-20261127T092552Z-1bfb04
+event:
+  kind: base_moved
+  ref: pull request 14
