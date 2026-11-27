@@ -1,0 +1,9 @@
+schema: factory/rejection/1
+id: REJ-20261127T102948Z-a6c73f
+created: '2026-11-27T10:29:48Z'
+by: owner@role-human
+covers:
+- kind: change
+  ref: TASK-0001
+  commit: 0c39b4af91c2eee97887e237d8e364097055b5b9
+reason: Forged evidence, written for GC-11.
