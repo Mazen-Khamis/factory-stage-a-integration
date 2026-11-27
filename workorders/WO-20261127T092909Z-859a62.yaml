@@ -1,0 +1,23 @@
+schema: factory/workorder/1
+id: WO-20261127T092909Z-859a62
+created: '2026-11-27T09:29:09Z'
+by: factory
+run: RUN-20261127T092909Z-0ac2cb
+task: TASK-0001
+base_commit: ce20a126911fcaabecfaabbae6b85c52f82b676c
+starts_from:
+  approval: APR-20261125T223350Z-447813
+  states:
+    frame: sha256:982adeb8f83f3f236eb605980ddb81b4899fc8fc6e3f3cc3bd580fda5f174896
+    requirement: sha256:b6a75a8f4dfee0bda4fcb5e3dafff8d08fbb69f5f3effdada180201e9e63898d
+    task: sha256:8fd1fb69b900fc8d19d2b77dff6e6e10b61f886d800534bbcd180b90b0637b5e
+    tests: sha256:e2c965b3397adbdddcd030fb9dc39d09e7be480a7745de597e16fe1861ba47d5
+instruction: Keep the function hello returning a greeting; changes are allowed only
+  under src/hello/.
+allowed_paths:
+- src/hello/
+limits:
+  time_minutes: 5
+  turns: 5
+adapter: test
+model_requested: not-used-by-the-test-adapter
