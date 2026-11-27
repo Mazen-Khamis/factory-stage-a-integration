@@ -1,0 +1,7 @@
+schema: factory/decision/1
+id: DEC-20261127T092227Z-0d5d36
+created: '2026-11-27T09:22:27Z'
+by: owner@role-human
+blocker: BLK-20261126T231145Z-b4aef5
+decision: retry
+reason: Second integration run of WP09
